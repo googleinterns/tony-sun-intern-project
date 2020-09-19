@@ -11,6 +11,6 @@ def is_gendered(sentence):
         return "male"
     elif contains_female and not contains_male:
         return "female"
-    elif contins_male and contains_female:
+    elif contains_male and contains_female:
         return "both"
     return False

@@ -3,6 +3,10 @@ import os
 import json
 from pathlib import Path
 
+import sys
+sys.path.append('../neutral_generation')
+from is_gendered import is_gendered
+
 from fairseq.models.transformer import TransformerModel
 
 SOURCE_GENERATION_ANNOTATION = [
@@ -53,19 +57,43 @@ def create_outputs(func, output_folder):
             f.write(sent)
 
 
-def evaluate_outputs(output_folder, fname):
+def split_generation(eval_set, generation_folder, female_indices, male_indices):
+    with open(os.path.join(f'{eval_set}/generations', generation_folder, 'generation.txt'), 'r') as f:
+        generation = f.readlines()
+
+    twitter = generation[:100]
+    reddit = generation[100:200]
+    news_articles = generation[200:300]
+    movie_quotes = generation[300:400]
+    jokes = generation[400:500]
+
+    female = [generation[idx] for idx in female_indices]
+    male = [generation[idx] for idx in male_indices]
+
+    return {
+        'twitter': twitter,
+        'reddit': reddit,
+        'news_articles': news_articles,
+        'movie_quotes': movie_quotes,
+        'jokes': jokes,
+        'female': female,
+        'male': male
+    }
+
+
+def evaluate_outputs(eval_set, output_folder, fname):
     scores = dict()
     for file_set in SOURCE_GENERATION_ANNOTATION:
         generation_file = file_set[1]
         annotation_file = file_set[2]
 
-        results = get_metrics(generation_file=os.path.join('test_set', output_folder, generation_file),
-                              annotation_file=os.path.join('test_set', annotation_file))
+        results = get_metrics(generation_file=os.path.join(eval_set, output_folder, generation_file),
+                              annotation_file=os.path.join(eval_set, annotation_file))
 
         domain = generation_file.split('.')[0]
         scores[domain] = results
 
-    with open(f"test_set/scores/{fname}.json", 'w') as f:
+    with open(f"{eval_set}/scores/{fname}.json", 'w') as f:
         json.dump(scores, f)
 
 
@@ -90,7 +118,8 @@ def main():
     # evaluate_outputs(output_folder='generations/old_convert_2', fname='old_convert_2')
     # evaluate_outputs(output_folder='generations/convert', fname='convert')
 
-#     eval_set = 'nongendered_test_set'
+    
+#     eval_set = 'gendered_test_set'
 
 #     with open(f'{eval_set}/source.txt', 'r') as f:
 #         source = f.readlines()
@@ -100,10 +129,12 @@ def main():
 #     print(len(female_indices))
 #     print(len(male_indices))
 
-#     algorithms = ['convert', 'old_convert_2', 'old_convert_1', 'prior_work', 'identity']
+# #     algorithms = ['convert', 'old_convert_2', 'old_convert_1', 'prior_work', 'identity']
 #     # algorithms = ['model_5_5', 'model_6_4', 'model_7_3', 'model_8_2', 'model_9_1', 'model_10_0', 'model_full']
+#     algorithms = ['model_sa_nt_10_3']
 #     for algo in algorithms:
-#         generation_fine_grained = split_generation(generation_folder=f"{algo}",
+#         generation_fine_grained = split_generation(eval_set=eval_set,
+#                                                    generation_folder=f"{algo}",
 #                                                    female_indices=female_indices,
 #                                                    male_indices=male_indices)
 
@@ -112,8 +143,10 @@ def main():
 #                 for sent in generation:
 #                     f.write(sent)
 
-#         evaluate_outputs(output_folder=f'generations/{algo}',
+#         evaluate_outputs(eval_set=eval_set,
+#                          output_folder=f'generations/{algo}',
 #                          fname=algo)
+    
     
 #     test_model(input_folder='nongendered',
 #                logs_folder='old_files/transformer_checkpoints_0817', 
@@ -121,12 +154,12 @@ def main():
 #                     bpe_folder='old_datasets/gn_wiki_data_updated_all_combined/code', 
 #                     output_folder='model_full')
 
-    test_model(input_folder='nongendered_test_set',
-               logs_folder='new_datasets/simple_augmentation', 
-                data_folder='new_datasets/simple_augmentation', 
-                bpe_folder='new_datasets/simple_augmentation/code', 
-                output_folder='model_simple_augmentation',
-              test_set=nongendered_test)
+    test_model(input_folder='gendered_test_set',
+               logs_folder='new_datasets/sa_nt_20_8', 
+                data_folder='new_datasets/sa_nt_20_8', 
+                bpe_folder='new_datasets/sa_nt_20_8/code', 
+                output_folder='model_sa_nt_20_8',
+              test_set=gendered_test)
     
 #     for i in range(5, 11):
 #         test_model(input_folder='nongendered',
